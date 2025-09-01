@@ -1,0 +1,31 @@
+# Core
+streamlit
+faiss-cpu
+openai
+sentence-transformers
+nltk
+scikit-learn
+numpy
+pandas
+requests
+
+# Para comunicação com LM Studio (via REST API)
+httpx
+
+# Para avaliação e métricas (BLEU, cosine, etc)
+torch
+evaluate
+
+# Para processamento textual e limpeza
+tqdm
+unidecode
+
+# Web scraping (ativar futuramente)
+beautifulsoup4
+lxml
+
+# Suporte a .env e paths
+python-dotenv
+
+# Compatibilidade geral
+typing-extensions
