@@ -32,7 +32,9 @@ def carregar_base_qa(empresa, with_embeddings=False, json_path_override=None):
         caminho = json_path_override
     else:
         caminho = os.path.join(BASE_QA_DIR, f"{empresa}.json")
-
+    
+    print(f"[INFO] Carregando base de QA de: {caminho}")
+    
     with open(caminho, 'r', encoding='utf-8') as f:
         base = json.load(f)
 

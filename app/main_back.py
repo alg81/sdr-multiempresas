@@ -4,39 +4,22 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
 from core.retrieval_engine import get_relevant_answer
-from core.config import EMPRESAS_DISPONIVEIS
+from core.config import EMPRESAS_DISPONIVEIS, DEBUG as DEBUG_MODE
 from core.llm_utils import query_general_llm
-from core.config import DEBUG_MODE
-from core.embeddings_manager import rebuild_and_save_faiss_index
-from core.utils import formatar_citacoes, log_debug, sanitize_markdown
 
-
-# Diretórios de dados
-JSON_DIR = "data/base_de_conhecimento/json"
-INDEX_DIR = "data/faiss"
-
-# Garantir que todos os índices FAISS necessários estejam atualizados
-for company in EMPRESAS_DISPONIVEIS:
-    json_path = os.path.join(JSON_DIR, f"{company}.json")
-    index_path = os.path.join(INDEX_DIR, f"{company}.index")
-
-    if os.path.exists(json_path) and not os.path.exists(index_path):
-        print(f"[INFO] FAISS index for '{company}' not found. Building...")
-        rebuild_and_save_faiss_index(company, json_dir=JSON_DIR, index_dir=INDEX_DIR)
-
+# Configuração do layout da página
 st.set_page_config(page_title="SDR Inteligente", page_icon="🤖", layout="centered")
 st.title("🤖 SDR Inteligente")
 
 # Estado da sessão
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 if "selected_company" not in st.session_state:
     st.session_state.selected_company = ""
-
 if "show_citations" not in st.session_state:
     st.session_state.show_citations = False
 
+# Lista de frases genéricas que vão direto para o LLM
 GENERIC_PHRASES = [
     "oi", "olá", "bom dia", "boa tarde", "boa noite",
     "e aí", "tudo bem?", "beleza?", "valeu", "obrigado", "agradecido",
@@ -46,43 +29,46 @@ GENERIC_PHRASES = [
 def is_small_talk(question):
     return question.lower().strip() in GENERIC_PHRASES
 
-# Seleção da empresa
-st.session_state.selected_company = st.selectbox("Selecione a empresa (opcional):", ["Nenhuma"] + EMPRESAS_DISPONIVEIS)
+# Empresa selecionada
+disponiveis = EMPRESAS_DISPONIVEIS
+st.session_state.selected_company = st.selectbox("Selecione a empresa (opcional):", ["Nenhuma"] + disponiveis)
 
-# Alternar visualização de citações
+# Alternar exibição de citações
 st.session_state.show_citations = st.toggle("Mostrar citações", value=False)
 
 # Entrada do usuário
 user_input = st.chat_input("Digite sua pergunta")
 
 if user_input:
-    # Mostrar pergunta do usuário
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.chat_message("user").write(user_input)
 
+    # Frase genérica? Usa LLM diretamente
     if is_small_talk(user_input):
-        answer = query_general_llm(user_input)
+        resposta = query_general_llm(user_input)
     else:
         company = st.session_state.selected_company
         if company == "Nenhuma":
             company = None
 
-        with st.spinner("Buscando resposta na base..."):
+        with st.spinner("Buscando resposta..."):
             relevant_answer, citations = get_relevant_answer(user_input, company)
-            print("[DEBUG] Resposta relevante bruta:", relevant_answer)
+
+        if DEBUG_MODE:
+            print(f"[DEBUG] Resposta relevante bruta: {repr(relevant_answer)}")
 
         if relevant_answer is not None and relevant_answer.strip() != "":
-            answer = relevant_answer
+            resposta = relevant_answer
             if st.session_state.show_citations and citations:
-                answer += "\n\n📚 *Fontes:* " + ", ".join(citations)
+                resposta += "\n\n📚 *Fontes:* " + ", ".join(citations)
         else:
-            answer = query_general_llm(user_input)
+            resposta = query_general_llm(user_input)
 
-    sanitized_answer = sanitize_markdown(answer)  # ✅ SANITIZAÇÃO
-    st.session_state.messages.append({"role": "assistant", "content": sanitized_answer})
-    st.chat_message("assistant").write(sanitized_answer)
+    # Exibir resposta
+    st.session_state.messages.append({"role": "assistant", "content": resposta})
+    st.chat_message("assistant").write(resposta)
 
-# Debug opcional
+# Debug sidebar
 if DEBUG_MODE:
     st.sidebar.title("Debug")
     st.sidebar.write("Histórico de mensagens")

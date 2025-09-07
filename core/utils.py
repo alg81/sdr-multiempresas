@@ -1,8 +1,9 @@
 import os
 import re
 import json
+import html
 from datetime import datetime
-from config import DEBUG_MODE, LOGS_DIR
+from core.config import DEBUG_MODE, LOGS_DIR
 
 
 def limpar_texto(texto):
@@ -39,3 +40,26 @@ def carregar_json(caminho):
 
 def timestamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def sanitize_markdown(text):
+    """
+    Sanitiza a resposta vinda do modelo para exibição no markdown do Streamlit.
+    Isso remove tokens HTML inesperados e escapa caracteres que possam quebrar o markdown.
+    """
+    if not isinstance(text, str):
+        return ""
+    
+    # Remove espaços desnecessários
+    text = text.strip()
+
+    # Substitui caracteres perigosos
+    text = text.replace("<script", "")
+    text = html.escape(text, quote=False)
+
+    # Substitui aspas HTML por normais
+    text = text.replace("&quot;", "\"").replace("&#x27;", "'")
+
+    # Reverte negrito/itálico se vier como &ast; ou &lowast;
+    text = text.replace("&ast;", "*").replace("&lowast;", "*")
+
+    return text

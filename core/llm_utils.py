@@ -1,12 +1,18 @@
 import requests
-from core.config import LM_STUDIO_API_BASE, NOME_MODELO_LLM, DEBUG
+from core.config import NOME_MODELO_LLM, LM_STUDIO_API_BASE, DEBUG_MODE
 
-def query_general_llm(prompt: str) -> str:
+def query_general_llm(prompt: str, context: str = None) -> str:
+    if context:
+        # Formato de prompt com contexto curto
+        full_prompt = f"<|context|>\n{context}\n\n<|question|>\n{prompt}"
+    else:
+        full_prompt = prompt
+
     payload = {
         "model": NOME_MODELO_LLM,
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": full_prompt}
         ],
         "temperature": 0.7
     }
@@ -16,7 +22,7 @@ def query_general_llm(prompt: str) -> str:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        if DEBUG:
+        if DEBUG_MODE:
             return f"[ERROR - GENERAL LLM] {str(e)}"
         return "An error occurred while generating the answer."
 
@@ -43,6 +49,6 @@ Question:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        if DEBUG:
+        if DEBUG_MODE:
             return f"[ERROR - CONTEXTUAL LLM] {str(e)}"
         return "An error occurred while generating the answer."
